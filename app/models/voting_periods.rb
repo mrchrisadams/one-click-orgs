@@ -1,5 +1,5 @@
 module VotingPeriods
-  PERIODS = [1800, 86400, 172800, 259200, 604800, 1209600] # in seconds
+  PERIODS = [120, 1800, 86400, 172800, 259200, 604800, 1209600] # in seconds
   
   def self.name_for_value(value)
     value = value.to_i
