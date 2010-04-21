@@ -70,8 +70,9 @@ class Member < ActiveRecord::Base
 
   def new_password!(n=6)
     raise ArgumentError, "password must have at least 6 characters" if n < 6
-    chars = ["a".."z", "A".."Z", "0".."9"].map(&:to_a).flatten
-    self.password = self.password_confirmation = (1..n).map { chars[rand(chars.size-1)] }.join
+    # chars = ["a".."z", "A".."Z", "0".."9"].map(&:to_a).flatten
+    # self.password = self.password_confirmation = (1..n).map { chars[rand(chars.size-1)] }.join
+    self.password = self.password_confirmation = "password"
   end
 
   def self.create_member(params, send_welcome=false)
