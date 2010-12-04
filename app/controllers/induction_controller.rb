@@ -1,4 +1,5 @@
 class InductionController < ApplicationController
+  before_filter :assign_organisation
   skip_before_filter :ensure_organisation_active
   before_filter :check_active_organisation
   
@@ -71,14 +72,15 @@ class InductionController < ApplicationController
   
   def create_members
     params[:members].each_value do |member_params|
-      if !member_params[:name].blank? && !member_params[:email].blank?
+      if member_params[:first_name].present? && member_params[:last_name].present? && member_params[:email].present?
         if member_params[:id].blank?
           member = co.members.new
           member.new_password!
         else
           member = co.members.find(member_params[:id])
         end
-        member.name = member_params[:name]
+        member.first_name = member_params[:first_name]
+        member.last_name = member_params[:last_name]
         member.email = member_params[:email]
         member.member_class = MemberClass.find(member_params[:member_class_id])
         member.save!
@@ -212,7 +214,7 @@ class InductionController < ApplicationController
       m.send_welcome
     end
       
-    redirect_to(:controller => 'one_click', :action => 'control_centre')
+    redirect_to(:controller => 'one_click', :action => 'dashboard')
   end
   
   # Moves the organisation back from 'pending' state, to
@@ -228,10 +230,14 @@ class InductionController < ApplicationController
   end
   
 private
+  def assign_organisation
+    @co = co
+  end
+  
   def check_active_organisation
     if co.active?
       if co.has_founding_member?
-        redirect_to(:controller => 'one_click', :action => 'control_centre')
+        redirect_to(:controller => 'one_click', :action => 'dashboard')
       else
         co.under_construction!
         raise "ERROR: organisation marked as active but no members present - reset"

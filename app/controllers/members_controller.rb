@@ -16,6 +16,13 @@ class MembersController < ApplicationController
   def show
     @member = co.members.find(params[:id])
     raise NotFound unless @member
+    
+    @timeline = [
+      @member,
+      @member.proposals.all,
+      @member.votes.all
+    ].flatten.map(&:to_event).compact.sort{|a, b| b[:timestamp] <=> a[:timestamp]}
+    
     respond_with @member
   end
 
@@ -38,7 +45,7 @@ class MembersController < ApplicationController
 
   def create
     member = params[:member]
-    title = "Add #{member['name']} as a member of #{current_organisation.organisation_name}" # TODO: should default in model
+    title = "Add #{member['first_name']} #{member['last_name']} as a member of #{current_organisation.organisation_name}" # TODO: should default in model
     proposal = co.add_member_proposals.new(
       :title => title,
       :proposer_member_id => current_user.id,
@@ -46,9 +53,9 @@ class MembersController < ApplicationController
     )
     
     if proposal.save
-      redirect_to members_path, :notice => "Add Member Proposal successfully created"
+      redirect_to root_path, :notice => "Add Member Proposal successfully created"
     else
-      redirect_to members_path, :flash => {:error => "Error creating proposal: #{@member.errors.inspect}"}      
+      redirect_to root_path, :flash => {:error => "Error creating proposal: #{@member.errors.inspect}"}      
     end
   end
 
@@ -75,7 +82,7 @@ class MembersController < ApplicationController
     )
     
     if proposal.save
-      redirect_to({:controller => 'one_click', :action => 'control_centre'}, :notice => "Ejection proposal successfully created")
+      redirect_to({:controller => 'one_click', :action => 'dashboard'}, :notice => "Ejection proposal successfully created")
     else
       redirect member_path(@member), :flash => {:error => "Error creating proposal: #{proposal.errors.inspect}"}
     end

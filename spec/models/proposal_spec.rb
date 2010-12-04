@@ -41,27 +41,43 @@ describe Proposal do
   end
   
   it "should send out an email to each member after a Proposal has been made" do
-    @organisation.members.count.should >0
-    lambda do
-      @organisation.proposals.make(:proposer => @member)
-    end.should change { Delayed::Job.count }.by(1)
-
-    job = Delayed::Job.first
-    job.payload_object.class.should   == Delayed::PerformableMethod
-    job.payload_object.method.should  == :send_email_without_send_later
-    job.payload_object.args.should    == []
+    @organisation.members.count.should > 0
+    @member.member_class.set_permission(:vote, true)
+    
+    ProposalMailer.should_receive(:notify_creation).and_return(mock('email', :deliver => nil))
+    @organisation.proposals.make(:proposer => @member)
   end
   
-  # FIXME Decision internals should be in the Decision spec, not here
-  it "should send out an email to each member after a Decision has been made" do
-     @organisation.members.count.should >0
+  describe "closing" do
+    before(:each) do
+      @organisation.members.count.should >0
 
-     lambda do
-       p = @organisation.proposals.make(:proposer => @member)
-       p.stub!(:passed?).and_return(true)
-       p.close!
-     end.should change { Delayed::Job.count }.by(2) #Decision + proposal
+      @p = @organisation.proposals.make(:proposer => @member)
+      @p.stub!(:passed?).and_return(true)
+      @p.stub!(:create_decision).and_return(@decision = mock_model(Decision, :send_email => nil))
+    end
+    
+    it "should send out an email to each member after a Decision has been made" do
+       @decision.should_receive(:send_email)
+       @p.close!
+    end
+    
+    context "when email delivery errors" do
+      before(:each) do
+        @decision.stub!(:send_email).and_raise(StandardError)
+      end
+      
+      it "should not propagate the error" do
+        lambda {@p.close!}.should_not raise_error
+      end
+      
+      it "should ensure the proposal is enacted" do
+        @p.should_receive(:enact!)
+        @p.close!
+      end
+    end
   end
+  
   
   describe "to_event" do
     it "should list open proposals as 'proposal's" do

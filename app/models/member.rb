@@ -8,8 +8,24 @@ class Member < ActiveRecord::Base
   has_many :proposals, :foreign_key => 'proposer_member_id'
   belongs_to :member_class
 
-  scope :active, where(["active = ? AND inducted_at IS NOT NULL", true])
+  scope :active, where("active = 1 AND inducted_at IS NOT NULL")
   scope :pending, where("inducted_at IS NULL")
+  
+  def proposals_count
+    proposals.count
+  end
+  
+  def succeeded_proposals_count
+    proposals.where(:open => false, :accepted => true).count
+  end
+  
+  def failed_proposals_count
+    proposals.where(:open => false, :accepted => false).count
+  end
+  
+  def votes_count
+    votes.count
+  end
 
   # AUTHENTICATION
 
@@ -93,7 +109,6 @@ class Member < ActiveRecord::Base
   def dispatch_welcome(cached_password)
     MembersMailer.welcome_new_member(self, cached_password).deliver
   end
-  handle_asynchronously :dispatch_welcome
   
   # only to be backwards compatible with systems running older versions of delayed job
   def self.send_new_member_email(member_id, password)
@@ -117,6 +132,11 @@ class Member < ActiveRecord::Base
   
   def has_permission(type)
     member_class.has_permission(type)
+  end
+  
+  def name
+    full_name = [first_name, last_name].compact.join(' ')
+    full_name.blank? ? nil : full_name
   end
 end
 

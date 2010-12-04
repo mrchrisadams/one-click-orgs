@@ -2,17 +2,22 @@ require 'machinist/active_record'
 require 'sham'
 require 'faker'
 
-Sham.name     { Faker::Name.name }
-Sham.email    { Faker::Internet.email }
-Sham.password { Faker::Name.first_name }
+Sham.name       { Faker::Name.name }
+Sham.email      { Faker::Internet.email }
+Sham.password   { Faker::Name.first_name }
+Sham.first_name { Faker::Name.first_name }
+Sham.last_name  { Faker::Name.last_name }
+Sham.subdomain  { Faker::Internet.domain_word }
 
 MemberClass.blueprint do
   name "Director"
+  organisation
 end
 
 Member.blueprint do
   email
-  name
+  first_name
+  last_name
   created_at {Time.now - 1.day}
   pw = Sham.password
   password pw
@@ -52,5 +57,5 @@ Setting.blueprint do
 end
 
 Organisation.blueprint do
-  subdomain 'test'
+  subdomain
 end

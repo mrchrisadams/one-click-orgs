@@ -47,15 +47,9 @@ describe Member do
   end
 
   describe "creation" do
-    it "should schedule a welcome email delivery after member has been created" do
-      lambda do
-        @organisation.members.create_member({:email=>'foo@example.com', :member_class=>MemberClass.make}, true)
-      end.should change { Delayed::Job.count }.by(1)
-      
-      job = Delayed::Job.first
-      job.payload_object.class.should   == Delayed::PerformableMethod
-      job.payload_object.method.should  == :send_email_without_send_later
-      job.payload_object.args.should    == []
+    it "should send a welcome email" do
+      MembersMailer.should_receive(:welcome_new_member).and_return(mock('mail', :deliver => nil))
+      @organisation.members.create_member({:email=>'foo@example.com', :member_class=>MemberClass.make}, true)
     end
   end
 
@@ -73,5 +67,22 @@ describe Member do
       @organisation.members.active.should == @organisation.members.all - [disabled]
     end
   end
-
+  
+  describe "name" do
+    it "returns the full name for a member with first name and last name" do
+      Member.new(:first_name => "Bob", :last_name => "Smith").name.should == "Bob Smith"
+    end
+    
+    it "returns the first name for a member with a first name only" do
+      Member.new(:first_name => "Bob").name.should == "Bob"
+    end
+    
+    it "returns the last name for a member with a last name only" do
+      Member.new(:last_name => "Smith").name.should == "Smith"
+    end
+    
+    it "returns nil for a member with no first name and no last name" do
+      Member.new.name.should be_nil
+    end
+  end
 end
