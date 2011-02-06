@@ -22,7 +22,7 @@ describe Proposal do
     member_0, member_1, member_2 = @organisation.members.make_n(3, :member_class => @default_member_class)
     member_3, member_4 = @organisation.members.make_n(2, :created_at => Time.now + 1.day, :member_class => @default_member_class)
     
-    proposal = @organisation.proposals.create!(:proposer_member_id => member_1.id, :title => 'test')            
+    proposal = @organisation.proposals.create!(:proposer_member_id => member_1.id, :title => 'test', :parameters => nil) 
     [member_0, member_1, member_2].each { |m| m.cast_vote(:for, proposal.id)}
     
     lambda {
@@ -33,7 +33,7 @@ describe Proposal do
   end
   
   it "should close due proposals" do    
-    proposal = @organisation.proposals.make(:proposer_member_id => @member.id, :close_date=>Time.now - 1.day)            
+    proposal = @organisation.proposals.make(:proposer_member_id => @member.id, :close_date=>Time.now - 1.day, :parameters => nil)  
     @organisation.proposals.close_due_proposals.should include(proposal)
     
     proposal.reload
@@ -42,7 +42,7 @@ describe Proposal do
   
   it "should send out an email to each member after a Proposal has been made" do
     @organisation.members.count.should > 0
-    @member.member_class.set_permission(:vote, true)
+    @member.member_class.set_permission!(:vote, true)
     
     ProposalMailer.should_receive(:notify_creation).and_return(mock('email', :deliver => nil))
     @organisation.proposals.make(:proposer => @member)
@@ -73,6 +73,20 @@ describe Proposal do
       
       it "should ensure the proposal is enacted" do
         @p.should_receive(:enact!)
+        @p.close!
+      end
+    end
+    
+    context "when proposal is a Founding Proposal" do
+      before(:each) do
+        @organisation.stub!(:can_hold_founding_vote?).and_return(true)
+        @p = FoundOrganisationProposal.make(:proposer => @member, :organisation => @organisation)
+        @p.stub!(:passed?).and_return(true)
+        @p.stub!(:create_decision).and_return(@decision = mock_model(Decision, :send_email => nil))
+      end
+      
+      it "asks the decision to send notification emails" do
+        @decision.should_receive(:send_email)
         @p.close!
       end
     end

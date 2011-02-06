@@ -5,13 +5,13 @@ module ProposalsSpecHelper
     Proposal.destroy_all
     user = login
     
-    set_permission(user, :freeform_proposal, true)
+    set_permission!(user, :freeform_proposal, true)
     post(proposals_path, {:proposal => {:id => nil, :proposer_member_id => user.id, :title => 'proposal'}})
     @proposal = Proposal.first or raise "can't create a proposal"
   end
 end
 
-describe "everything" do
+describe "Proposals" do
   include ProposalsSpecHelper
   
   before(:each) do 
@@ -23,11 +23,11 @@ describe "everything" do
   
   describe "/proposals/1, given a proposal exists" do
     before(:each) do
-      set_permission(@user, :vote, true)
+      set_permission!(@user, :vote, true)
       @member_two = @organisation.members.make(:member_class => @default_member_class)
-      set_permission(@member_two, :vote, true)
+      set_permission!(@member_two, :vote, true)
       @member_three = @organisation.members.make(:member_class => @default_member_class)
-      set_permission(@member_two, :vote, true)
+      set_permission!(@member_two, :vote, true)
       
       a_proposal_exists
     end
@@ -69,24 +69,147 @@ describe "everything" do
      end
   end
   
+  describe "creating settings proposals in bulk" do
+    before(:each) do
+      @user = login
+      set_permission!(@user, :constitution_proposal, true)
+      @proposal = mock('proposal', :save => true, :start => true, :accepted? => false)
+      
+      ChangeTextProposal.stub(:new).and_return(mock('proposal', :save => true, :start => true, :accepted? => false))
+      ChangeVotingSystemProposal.stub(:new).and_return(mock('proposal', :save => true, :start => true, :accepted? => false))
+      ChangeBooleanProposal.stub(:new).and_return(mock('proposal', :save => true, :start => true, :accepted? => false))
+      ChangeVotingPeriodProposal.stub(:new).and_return(mock('proposal', :save => true, :start => true, :accepted? => false))
+    end
+    
+    def post_create_settings_proposals
+      post '/proposals/create_settings_proposals', {"organisation_objectives"=>"New objectives", "constitution_voting_system"=>"Unanimous", "assets"=>"1", "voting_period"=>"1209600", "organisation_name"=>"New name", "general_voting_system"=>"AbsoluteMajority", "membership_voting_system"=>"AbsoluteTwoThirdsMajority"}
+    end
+    
+    it "should create a proposal to change the organisation name" do
+      ChangeTextProposal.should_receive(:new).with(
+        :parameters => {
+          'name' => 'organisation_name',
+          'value' => 'New name'
+        },
+        :proposer_member_id => @user.id,
+        :title => "Change organisation name to 'New name'"
+      ).once.ordered.and_return(@proposal)
+      @proposal.should_receive(:start).and_return(true)
+      @proposal.should_receive(:accepted?).and_return(false)
+      
+      post_create_settings_proposals
+    end
+    
+    it "should create a proposal to change the objectives" do
+      ChangeTextProposal.should_receive(:new).with(
+        :parameters => {
+          'name' => 'organisation_objectives',
+          'value' => 'New objectives'
+        },
+        :proposer_member_id => @user.id,
+        :title => "Change organisation objectives to 'New objectives'"
+      ).and_return(@proposal)
+      @proposal.should_receive(:start).and_return(true)
+      @proposal.should_receive(:accepted?).and_return(false)
+      
+      post_create_settings_proposals
+    end
+    
+    it "should create a proposal to change the general voting system" do
+      ChangeVotingSystemProposal.should_receive(:new).with(
+        :parameters => {
+          'type' => 'general',
+          'proposed_system' => 'AbsoluteMajority'
+        },
+        :proposer_member_id => @user.id,
+        :title => "Change general voting system to Absolute majority: decisions need supporting votes from more than 50% of members"
+      ).and_return(@proposal)
+      @proposal.should_receive(:start).and_return(true)
+      @proposal.should_receive(:accepted?).and_return(false)
+      
+      post_create_settings_proposals
+    end
+    
+    it "should create a proposal to change the membership voting system" do
+      ChangeVotingSystemProposal.should_receive(:new).with(
+        :parameters => {
+          'type' => 'membership',
+          'proposed_system' => 'AbsoluteTwoThirdsMajority'
+        },
+        :proposer_member_id => @user.id,
+        :title => "Change membership voting system to Two thirds majority: decisions need supporting votes from more than 66% of members"
+      ).and_return(@proposal)
+      @proposal.should_receive(:start).and_return(true)
+      @proposal.should_receive(:accepted?).and_return(false)
+      
+      post_create_settings_proposals
+    end
+    
+    it "should create a proposal to change the constitution voting system" do
+      ChangeVotingSystemProposal.should_receive(:new).with(
+        :parameters => {
+          'type' => 'constitution',
+          'proposed_system' => 'Unanimous'
+        },
+        :proposer_member_id => @user.id,
+        :title => "Change constitution voting system to Unanimous: decisions need supporting votes from 100% of members"
+      ).and_return(@proposal)
+      @proposal.should_receive(:start).and_return(true)
+      @proposal.should_receive(:accepted?).and_return(false)
+      
+      post_create_settings_proposals
+    end
+    
+    it "should create a proposal to allow assets" do
+      ChangeBooleanProposal.should_receive(:new).with(
+        :proposer_member_id => @user.id,
+        :parameters => {
+          'name' => 'assets',
+          'value' => true
+        },
+        :title => "Change the constitution to allow holding, transferral and disposal of material assets and intangible assets"
+      ).and_return(@proposal)
+      @proposal.should_receive(:start).and_return(true)
+      @proposal.should_receive(:accepted?).and_return(false)
+      
+      post_create_settings_proposals
+    end
+    
+    it "should create a proposal to change the voting period" do
+      ChangeVotingPeriodProposal.should_receive(:new).with(
+        :title => "Change voting period to 14 days",
+        :parameters => {
+          'new_voting_period' => "1209600"
+        },
+        :proposer_member_id => @user.id
+      ).and_return(@proposal)
+      @proposal.should_receive(:start).and_return(true)
+      @proposal.should_receive(:accepted?).and_return(false)
+      
+      post_create_settings_proposals
+    end
+  end
+  
   describe "proposing text amendments" do
     before(:each) do
       @user = login
-      set_permission(@user, :constitution_proposal, true)
+      set_permission!(@user, :constitution_proposal, true)
       @proposal = mock('proposal', :save => true)
     end
     
     it "should create a proposal to change the organisation name" do
       ChangeTextProposal.should_receive(:new).with(
-        :title => "Change organisation name to 'The Yoghurt Yurt'",
+        :title => "Change name to 'The Yoghurt Yurt'",
         :parameters => {
-          'name' => 'organisation_name',
+          'name' => 'name',
           'value' => 'The Yoghurt Yurt'
         },
         :proposer_member_id => @user.id
       ).and_return(@proposal)
+      @proposal.should_receive(:start).and_return(true)
+      @proposal.should_receive(:accepted?).and_return(false)
       
-      post(url_for(:controller => 'proposals', :action => 'create_text_amendment'), {'name' => 'organisation_name', 'value' => 'The Yoghurt Yurt'})
+      post(url_for(:controller => 'proposals', :action => 'create_text_amendment'), {'name' => 'name', 'value' => 'The Yoghurt Yurt'})
 
       @response.should redirect_to('/one_click/dashboard')
     end
@@ -100,6 +223,8 @@ describe "everything" do
         },
         :proposer_member_id => @user.id
       ).and_return(@proposal)
+      @proposal.should_receive(:start).and_return(true)
+      @proposal.should_receive(:accepted?).and_return(false)
       
       post(url_for(:controller => 'proposals', :action => 'create_text_amendment'), {'name' => 'objectives', 'value' => 'make all the yoghurt'})
       
@@ -115,6 +240,8 @@ describe "everything" do
         },
         :proposer_member_id => @user.id
       ).and_return(@proposal)
+      @proposal.should_receive(:start).and_return(true)
+      @proposal.should_receive(:accepted?).and_return(false)
       
       post(url_for(:controller => 'proposals', :action => 'create_text_amendment'), {'name' => 'domain', 'value' => 'yaourt.com'})
       
@@ -125,11 +252,11 @@ describe "everything" do
   describe "proposing text amendments without having permission" do
     before(:each) do
       @user = login
-      set_permission(@user, :constitution_proposal, false)
+      set_permission!(@user, :constitution_proposal, false)
     end
     
     it "should fail" do      
-      post(url_for(:controller => 'proposals', :action => 'create_text_amendment'), {'name' => 'organisation_name', 'value' => 'The Yoghurt Yurt'})
+      post(url_for(:controller => 'proposals', :action => 'create_text_amendment'), {'name' => 'name', 'value' => 'The Yoghurt Yurt'})
       @response.should redirect_to('/')
       Proposal.where(:proposer_member_id => @user.id).should be_empty
     end
@@ -138,10 +265,10 @@ describe "everything" do
   describe "proposing voting system amendments" do
     before do
       login
-      set_permission(@user, :constitution_proposal, true)
-      @general_voting_system = @organisation.clauses.set_text('general_voting_system', 'RelativeMajority')
-      @membership_voting_system = @organisation.clauses.set_text('membership_voting_system', 'RelativeMajority')
-      @constitution_voting_system = @organisation.clauses.set_text('constitution_voting_system', 'RelativeMajority')
+      set_permission!(@user, :constitution_proposal, true)
+      @general_voting_system = @organisation.clauses.set_text!('general_voting_system', 'RelativeMajority')
+      @membership_voting_system = @organisation.clauses.set_text!('membership_voting_system', 'RelativeMajority')
+      @constitution_voting_system = @organisation.clauses.set_text!('constitution_voting_system', 'RelativeMajority')
     end
     
     describe "for general decisions" do
@@ -153,7 +280,7 @@ describe "everything" do
         @response.should redirect_to("/one_click/dashboard")
       
         ChangeVotingSystemProposal.count.should == 1
-        ChangeVotingSystemProposal.first.title.should == 'change general voting system to Supporting votes from every single member'
+        ChangeVotingSystemProposal.first.title.should == 'Change general voting system to Unanimous: decisions need supporting votes from 100% of members'
         proposal_parameters = ChangeVotingSystemProposal.all.first.parameters
         proposal_parameters['type'].should == 'general'
         proposal_parameters['proposed_system'].should == 'Unanimous'
@@ -169,7 +296,7 @@ describe "everything" do
         @response.should redirect_to("/one_click/dashboard")
       
         ChangeVotingSystemProposal.count.should == 1
-        ChangeVotingSystemProposal.all.first.title.should == 'change membership voting system to No opposing votes'
+        ChangeVotingSystemProposal.all.first.title.should == 'Change membership voting system to Nobody opposes: decisions blocked if there are any opposing votes'
         proposal_parameters = ChangeVotingSystemProposal.all.first.parameters
         proposal_parameters['type'].should == 'membership'
         proposal_parameters['proposed_system'].should == 'Veto'
@@ -184,7 +311,7 @@ describe "everything" do
         @response.should redirect_to("/one_click/dashboard")
       
         ChangeVotingSystemProposal.count.should == 1
-        ChangeVotingSystemProposal.all.first.title.should == 'change constitution voting system to Supporting votes from more than half the members'
+        ChangeVotingSystemProposal.all.first.title.should == 'Change constitution voting system to Absolute majority: decisions need supporting votes from more than 50% of members'
         proposal_parameters = ChangeVotingSystemProposal.all.first.parameters
         proposal_parameters['type'].should == 'constitution'
         proposal_parameters['proposed_system'].should == 'AbsoluteMajority'
@@ -199,7 +326,7 @@ describe "everything" do
         @response.should redirect_to("/one_click/dashboard")
 
         ChangeVotingPeriodProposal.count.should == 1
-        ChangeVotingPeriodProposal.all.first.title.should == 'Change voting period to 24 hours'
+        ChangeVotingPeriodProposal.all.first.title.should == 'Change voting period to 1 day'
         proposal_parameters = ChangeVotingPeriodProposal.all.first.parameters
         proposal_parameters['new_voting_period'].to_i.should == 86400
       end
@@ -209,7 +336,7 @@ describe "everything" do
   describe "proposing voting system amendments without having permission" do
     before(:each) do
       @user = login
-      set_permission(@user, :constitution_proposal, false)
+      set_permission!(@user, :constitution_proposal, false)
     end
     
     it "should fail" do      

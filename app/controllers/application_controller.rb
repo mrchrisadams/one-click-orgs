@@ -10,12 +10,14 @@ class ApplicationController < ActionController::Base
   before_filter :ensure_organisation_exists
   before_filter :ensure_authenticated
   before_filter :ensure_member_active
-  before_filter :ensure_organisation_active
+  #before_filter :ensure_organisation_active
   before_filter :ensure_member_inducted
+  before_filter :prepare_notifications
   
   # Returns the organisation corresponding to the subdomain that the current
   # request has been made on (or just returns the organisation if the app
   # is running in single organisation mode).
+  helper_method :current_organisation
   def current_organisation
     @current_organisation ||= (
       if Setting[:single_organisation_mode]
@@ -26,6 +28,8 @@ class ApplicationController < ActionController::Base
     )
   end
   alias :co :current_organisation
+  
+  helper_method :current_organisation, :co
   
   def date_format(d)
     d.to_s(:long)
@@ -39,7 +43,7 @@ class ApplicationController < ActionController::Base
   # Returns true if a user is logged in; false otherwise.
   def user_logged_in?
     current_user = @current_user
-    current_user ||= session[:user] ? co.members.find_by_id(session[:user]) : false
+    current_user ||= session[:user] && co ? co.members.find_by_id(session[:user]) : false
     @current_user = current_user
     current_user.is_a?(Member)
   end
@@ -60,7 +64,7 @@ class ApplicationController < ActionController::Base
   end
   
   def prepare_constitution_view
-    @organisation_name = co.organisation_name
+    @organisation_name = co.name
     @objectives = co.objectives
     @assets = co.assets
     @website = co.domain
@@ -73,6 +77,46 @@ class ApplicationController < ActionController::Base
     @constitution_voting_system = co.constitution.voting_system(:constitution)
   end
   
+  # Notifications
+  
+  def prepare_notifications
+    return unless current_user
+    
+    # If you have a notification you want to show the user, put the
+    # logic in here, and the template in shared/notifications.
+    # 
+    # Call show_notification_once if you only want the user to
+    # see your notification once ever (e.g. a 'welcome to the
+    # system' notification).
+    # 
+    # Call show_notification if it doesn't matter whether the user
+    # has seen this notification before (e.g. a 'you have a new
+    # message' notification).
+    
+    if co.pending? && current_user.member_class.name == "Founder"
+      show_notification_once(:convener_welcome)
+    end
+
+    fop = co.found_organisation_proposals.last
+    if co.pending? && fop && fop.closed? && !fop.accepted?
+      show_notification_once(:founding_proposal_failed)
+    end
+
+    if co.active?
+      show_notification_once(:founding_proposal_passed)
+    end
+  end
+  
+  def show_notification_once(notification)
+    return unless current_user
+    return if current_user.has_seen_notification?(notification)
+    show_notification(notification)
+  end
+  
+  def show_notification(notification)
+    @notification = notification
+  end
+  
   protected
   
   def ensure_set_up
@@ -83,7 +127,7 @@ class ApplicationController < ActionController::Base
   
   def ensure_organisation_exists
     unless current_organisation
-      redirect_to(new_organisation_url(:host => Setting[:base_domain]))
+      redirect_to(new_organisation_url(:host => Setting[:signup_domain]))
     end
   end
   
@@ -102,15 +146,15 @@ class ApplicationController < ActionController::Base
     end
   end
   
-  def ensure_organisation_active
-    return if co.active?
-    
-    if co.pending?
-      redirect_to(:controller => 'induction', :action => 'founding_meeting')
-    else
-      redirect_to(:controller => 'induction', :action => 'founder')
-    end
-  end
+  # def ensure_organisation_active
+  #   return if co.active?
+  #   
+  #   if co.pending?
+  #     redirect_to(:controller => 'induction', :action => 'founding_meeting')
+  #   else
+  #     redirect_to(:controller => 'induction', :action => 'founder')
+  #   end
+  # end
   
   def ensure_member_inducted
     redirect_to_welcome_member if co.active? && current_user && !current_user.inducted?
@@ -130,11 +174,7 @@ class ApplicationController < ActionController::Base
   
   rescue_from Unauthenticated, :with => :handle_unauthenticated
   def handle_unauthenticated
-    if co.has_founding_member?
-      store_location
-      redirect_to login_path
-    else
-      redirect_to(:controller => 'induction', :action => 'founder')
-    end
+    store_location
+    redirect_to login_path
   end
 end

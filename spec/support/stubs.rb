@@ -2,6 +2,7 @@
 
 def stub_setup!
   Setting[:base_domain] ||= "oneclickorgs.com"
+  Setting[:signup_domain] ||= "signup.oneclickorgs.com"
 end
 
 def default_member_class
@@ -26,25 +27,25 @@ end
 
 def stub_constitution!
   stub_organisation!
-  @organisation.clauses.set_integer(:voting_period, 3 * 86400)
+  @organisation.clauses.set_integer!(:voting_period, 3 * 86400)
 end
 
 def stub_voting_systems!
   stub_constitution!
-  @organisation.clauses.set_text(:general_voting_system, 'RelativeMajority')
-  @organisation.clauses.set_text(:constitution_voting_system, 'RelativeMajority')
-  @organisation.clauses.set_text(:membership_voting_system, 'RelativeMajority')
+  @organisation.clauses.set_text!(:general_voting_system, 'RelativeMajority')
+  @organisation.clauses.set_text!(:constitution_voting_system, 'RelativeMajority')
+  @organisation.clauses.set_text!(:membership_voting_system, 'RelativeMajority')
 end
 
 def stub_organisation!(active=true, name='test', stub_host_lookup=true, new_organisation=false)
   stub_setup!
   if new_organisation || !@organisation
-    @organisation = Organisation.make(:subdomain => name)
+    @organisation = Organisation.make(:subdomain => name, :name => name, :objectives => 'our objectives')
     
     # TODO remove this; we don't use this clause anymore
-    @organisation.clauses.set_text(:domain, "#{name}.oneclickorgs.com")
+    #@organisation.clauses.set_text!(:domain, "#{name}.oneclickorgs.com")
     
-    @organisation.clauses.set_text(:organisation_name, name)
+    #@organisation.clauses.set_text!(:organisation_name, name)
   
     organisation_is_active if active
   
@@ -61,9 +62,8 @@ def login
   @user
 end
 
-def set_permission(user, perm, value)
-  user.member_class.set_permission(perm, value)
-  user.member_class.save
+def set_permission!(user, perm, value)
+  user.member_class.set_permission!(perm, value)
 end
 
 def passed_proposal(p, args={})
@@ -73,12 +73,12 @@ end
 
 def organisation_is_pending
   stub_organisation!(false) unless @organisation
-  @organisation.clauses.set_text('organisation_state', "pending")
+  @organisation.clauses.set_text!('organisation_state', "pending")
 end
 
 def organisation_is_active
   stub_organisation!(false) unless @organisation
-  @organisation.clauses.set_text('organisation_state', "active")
+  @organisation.clauses.set_text!('organisation_state', "active")
   @organisation.should be_active
 end
 

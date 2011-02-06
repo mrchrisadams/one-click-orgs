@@ -8,6 +8,7 @@ Sham.password   { Faker::Name.first_name }
 Sham.first_name { Faker::Name.first_name }
 Sham.last_name  { Faker::Name.last_name }
 Sham.subdomain  { Faker::Internet.domain_word }
+Sham.objectives       { Faker::Lorem.sentence }
 
 MemberClass.blueprint do
   name "Director"
@@ -35,14 +36,20 @@ Proposal.blueprint do
   proposer {Member.make}
 end
 
-Decision.blueprint do
-  proposal {Proposal.make}
-end
-
 AddMemberProposal.blueprint do
   title "a proposal title"
   self.send(:assign_attribute, :open, 1)
   proposer {Member.make}
+end
+
+FoundOrganisationProposal.blueprint do
+  title "a proposal title"
+  self.send(:assign_attribute, :open, 1)
+  proposer {Member.make}
+end
+
+Decision.blueprint do
+  proposal {Proposal.make}
 end
 
 Clause.blueprint do
@@ -57,5 +64,7 @@ Setting.blueprint do
 end
 
 Organisation.blueprint do
+  name
+  objectives
   subdomain
 end

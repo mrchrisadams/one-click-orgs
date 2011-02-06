@@ -35,21 +35,10 @@ describe Member do
     }.should raise_error(VoteError)
   end
 
-  describe "passwords" do
-    it "should generate a new random password" do
-      new_pass = @member.new_password!(10)
-      new_pass.size.should == 10
-    end
-
-    it "should have at least 6 characters" do
-      lambda { @member.new_password!(1) }.should raise_error(ArgumentError)
-    end
-  end
-
   describe "creation" do
     it "should send a welcome email" do
       MembersMailer.should_receive(:welcome_new_member).and_return(mock('mail', :deliver => nil))
-      @organisation.members.create_member({:email=>'foo@example.com', :member_class=>MemberClass.make}, true)
+      @organisation.members.create_member({:email=>'foo@example.com', :first_name=>'Klaus', :last_name=>'Haus'}, true)
     end
   end
 
@@ -58,7 +47,6 @@ describe Member do
       lambda { @member.eject! }.should change(@member, :active?).from(true).to(false)
     end
   end
-
 
   describe "finders" do
     it "should return only active members" do
@@ -83,6 +71,55 @@ describe Member do
     
     it "returns nil for a member with no first name and no last name" do
       Member.new.name.should be_nil
+    end
+  end
+  
+  describe " terms and conditions acceptance" do
+    context "when creating a new member" do
+      before(:each) do
+        @member = Member.make_unsaved
+      end
+      
+      it "saves a timestamp when terms are accepted" do
+        @member.terms_and_conditions = '1'
+        @member.save.should be_true
+        @member.terms_accepted_at.should_not be_nil
+      end
+      
+      it "fails validation when terms are not accepted" do
+        @member.terms_and_conditions = '0'
+        @member.save.should be_false
+      end
+      
+      it "does not save a timestamp when terms_and_conditions is not passed" do
+        @member.terms_and_conditions = nil
+        @member.save.should be_true
+        @member.terms_accepted_at.should be_nil
+      end
+    end
+    
+    context "when updating an existing member" do
+      before(:each) do
+        @member = Member.make(:terms_accepted_at => Time.now.utc - 1.day)
+        @original_timestamp = @member.terms_accepted_at
+      end
+      
+      it "does not alter the timestamp when terms_and_conditions is nil" do
+        @member.terms_and_conditions = nil
+        @member.save.should be_true
+        @member.terms_accepted_at.should == @original_timestamp
+      end
+      
+      it "does not alter an existing timestamp when terms are accepted again" do
+        @member.terms_and_conditions = '1'
+        @member.save.should be_true
+        @member.terms_accepted_at.should == @original_timestamp
+      end
+      
+      it "fails validation when terms are not accepted" do
+        @member.terms_and_conditions = '0'
+        @member.save.should be_false
+      end
     end
   end
 end

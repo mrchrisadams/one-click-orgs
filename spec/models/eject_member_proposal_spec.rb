@@ -7,16 +7,16 @@ describe EjectMemberProposal do
   end
     
   it "should use the membership voting system" do
-    @organisation.clauses.set_text('membership_voting_system', 'Veto')
+    @organisation.clauses.set_text!('membership_voting_system', 'Veto')
     @organisation.eject_member_proposals.new.voting_system.should == VotingSystems::Veto
   end
   
   it "should eject the member after passing, disabling the account" do
     @m = @organisation.members.make    
     
-    @p = @organisation.eject_member_proposals.new(:parameters=> {'id' => @m.id }.to_json)
+    @p = @organisation.eject_member_proposals.new
     @m.should be_active
-    passed_proposal(@p).call
+    passed_proposal(@p, 'id' => @m.id ).call
     
     #FIXME make proposals more testable by avoiding loading of models
     #@m.should_receive(:eject!)
