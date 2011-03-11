@@ -82,8 +82,9 @@ OneClickOrgs::Application.routes.draw do
   
   match '/one_click(/:action)' => 'one_click'
   #match '/induction(/:action)' => 'induction'
-  
+ 
   match '/login' => 'member_sessions#new', :as => 'login'
+  match '/logout' => 'member_sessions#destroy', :as => 'logout', :via => "get"
   resource :member_session, :only => [:new, :create, :destroy]
   
   match '/welcome(/:action)' => 'welcome'
@@ -99,7 +100,8 @@ OneClickOrgs::Application.routes.draw do
   match '/r/:id' => 'password_resets#edit', :as => 'short_password_reset'
   resources :password_resets
 
-  match '/admin/test_email' => 'admin', :conditions => { :method => :post }, :action => :test_email
+  match '/admin/test_email' => 'admin#test_email', :conditions => { :method => :post }
+  match '/admin/test_exception_notification' => 'admin#test_exception_notification'
   
   root :to => 'one_click#dashboard'
 end

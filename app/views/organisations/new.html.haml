@@ -8,6 +8,9 @@
   = link_to('the FAQ', 'http://www.oneclickorgs.com/faq', :target => '_blank')
   if you have any questions.
 
+%p
+  You can change all of these details (apart from your web address) before calling a founding vote.
+
 = form_tag({:controller => 'organisations', :action => 'create'}, :method => "post", :id => 'new_organisation') do
 
   %div.left
@@ -46,7 +49,7 @@
             = '.' + Setting[:base_domain]
       %p
         = f.label :objectives, "What the Association exists for"
-        %textarea{:name => 'organisation[objectives]', :id => 'objectives', :placeholder => 'Strengthen a common enjoyment of oily fish'}
+        = f.text_area :objectives, :id => 'objectives', :placeholder => 'Strengthen a common enjoyment of oily fish'
   
       %p
         = submit_tag "Create draft constitution →", :id => 'submit'

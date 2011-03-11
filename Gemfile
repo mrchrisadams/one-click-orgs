@@ -1,6 +1,6 @@
 source 'http://rubygems.org'
 
-gem "rails", "3.0.1"
+gem "rails", "3.0.4"
 
 # Bundle edge Rails instead:
 # gem 'rails', :git => 'git://github.com/rails/rails.git'
@@ -28,6 +28,8 @@ gem "daemons", "~>1.0.10"
 
 gem "delayed_job", "2.1.3"
 
+gem "exception_notification_rails3", :require => 'exception_notifier'
+
 # Bundle gems for the local environment. Make sure to
 # put test-only gems in this group so their generators
 # and rake tasks are available in development mode:
@@ -39,9 +41,9 @@ group :development do
   gem "capistrano", "~>2.5.19"
 end
 
-group :test do
-  gem "rspec-rails", "~>2.0.1"
-  gem "webrat", "=0.7.1"
+group :development, :test do
+  gem "rspec-rails", "~>2.5.0"
+  gem "webrat", "~>0.7.1"
   gem "machinist", "~>1.0.6"
   gem "faker", '~>0.3.1'
   gem "rcov", "~>0.9.8"
