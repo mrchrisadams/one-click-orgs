@@ -14,15 +14,11 @@ Feature:
     And everyone has voted against the founding
     And the proposal closer runs
     And I have logged in
-    # Then show me the page
     Then I should see "Sorry, the Founding Vote has failed."
-    And another founding vote has been started
+    When another founding vote has been started
     And everyone has voted against the founding
-
     And the proposal closer runs
     And I go to the home page
-    Then show me the page
     Then I should see "Sorry, the Founding Vote has failed."
-    # Then I should see "Sorry, the founding vote has failed"
     
 
