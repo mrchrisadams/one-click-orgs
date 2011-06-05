@@ -132,7 +132,7 @@ class ApplicationController < ActionController::Base
     # if the organisation is pending
     # and the voting is finished (fop.closed)
     # and a founding proposal exists
-    # and is the proposal
+    # and is the proposal 
     if co.pending? && fop && fop.closed? && !fop.accepted?
       show_notification_once(:founding_proposal_failed)
     end

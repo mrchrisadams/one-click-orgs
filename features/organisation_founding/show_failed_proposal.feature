@@ -2,8 +2,6 @@ Feature:
   As a founder
   I want to know when a founding vote fails
   In order to know respond to it
-
-
   Scenario: failing vote should show notification
     Given the application is set up
     And an organisation has been created
