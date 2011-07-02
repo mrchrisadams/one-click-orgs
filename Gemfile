@@ -60,3 +60,5 @@ group :development, :test do
   gem "database_cleaner", "~>0.6.7"
   gem "launchy", "~>0.4.0"
 end
+
+gem 'selenium-webdriver', '0.2.2'
